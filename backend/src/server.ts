@@ -7,6 +7,12 @@ import { initDb } from "./config/db";
 import pool from "./config/db";
 import authRoutes from "./routes/authRoutes";
 import financeiroRoutes from "./routes/financeiroRoutes";
+import rateLimit from 'express-rate-limit';
+
+const limiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20
+});
 
 dotenv.config();
 
@@ -23,9 +29,8 @@ async function startServer() {
     origin: true, // Em produção, especifique o domínio
     credentials: true
   }));
-  
-  app.use(express.json());
 
+  app.use(express.json());
   // Configuração de Sessão
   app.use(session({
     store: new PgSession({
@@ -42,7 +47,7 @@ async function startServer() {
       sameSite: 'lax'
     }
   }));
-
+  app.use('/finance/analisar', limiter);
   // API Routes
   app.use("/api/auth", authRoutes);
   app.use("/api/financeiro", financeiroRoutes);
@@ -51,8 +56,8 @@ async function startServer() {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Backend server running on http://0.0.0.0:${PORT}`);
+  app.listen(PORT, () => {
+    console.log(`Backend server running on http://::${PORT}`);
   });
 }
 

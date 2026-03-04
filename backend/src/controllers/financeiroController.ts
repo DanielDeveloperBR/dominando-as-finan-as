@@ -18,7 +18,7 @@ export class FinanceiroController {
     try {
       const userId = (req.session as any).userId;
       const { descricao, valor, tipo, categoria } = req.body;
-      
+
       if (!descricao || !valor || !tipo || !categoria) {
         return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
       }
@@ -29,7 +29,7 @@ export class FinanceiroController {
         tipo,
         categoria
       });
-      
+
       res.status(201).json(transacao);
     } catch (error) {
       console.error('Erro ao adicionar:', error);
@@ -40,8 +40,15 @@ export class FinanceiroController {
   static async remover(req: Request, res: Response) {
     try {
       const userId = (req.session as any).userId;
-      const { id } = req.params;
-      await FinanceiroService.removerTransacao(userId, id);
+
+      const idParam = req.params.id;
+
+      if (!idParam || Array.isArray(idParam)) {
+        return res.status(400).json({ error: 'ID inválido' });
+      }
+
+      await FinanceiroService.removerTransacao(userId, idParam);
+
       res.status(204).send();
     } catch (error) {
       console.error('Erro ao remover:', error);
@@ -65,12 +72,39 @@ export class FinanceiroController {
       const userId = (req.session as any).userId;
       const transacoes = await FinanceiroService.listarTransacoes(userId);
       const resumo = await FinanceiroService.calcularResumo(userId);
-      
+
       const analise = await AIService.analisarFinancas(transacoes, resumo.saldoTotal);
       res.json(analise);
     } catch (error) {
       console.error('Erro ao analisar:', error);
       res.status(500).json({ error: 'Erro ao analisar finanças' });
+    }
+  }
+  static async summary(req: Request, res: Response) {
+    try {
+      const userId = (req.session as any).userId;
+
+      if (!userId) {
+        return res.status(401).json({ error: 'Usuário não autenticado' });
+      }
+
+      const summary = await FinanceiroService.getSummaryCompleto(userId);
+
+      res.json(summary);
+
+    } catch (error) {
+      console.error('Erro ao gerar summary:', error);
+      res.status(500).json({ error: 'Erro ao gerar summary' });
+    }
+  }
+
+  static async historico(req: Request, res: Response) {
+    try {
+      const userId = (req.session as any).userId;
+      const historico = await FinanceiroService.getHistoricoScore(userId);
+      res.json(historico);
+    } catch (error) {
+      res.status(500).json({ error: 'Erro ao buscar histórico' });
     }
   }
 }

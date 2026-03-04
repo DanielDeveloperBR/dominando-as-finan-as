@@ -4,7 +4,7 @@ const API_URL = '/api/financeiro';
 
 export class FinanceiroService {
   static async listar(): Promise<Transacao[]> {
-    const res = await fetch(API_URL);
+    const res = await fetch(API_URL, {credentials: 'include'});
     if (!res.ok) throw new Error('Erro ao listar transações');
     return res.json();
   }
@@ -13,6 +13,7 @@ export class FinanceiroService {
     const res = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(dados),
     });
 
@@ -21,18 +22,18 @@ export class FinanceiroService {
   }
 
   static async remover(id: string): Promise<void> {
-    const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+    const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE', credentials: 'include' });
     if (!res.ok) throw new Error('Erro ao remover transação');
   }
 
   static async resumo(): Promise<{ receitaTotal: number; despesaTotal: number; saldoTotal: number }> {
-    const res = await fetch(`${API_URL}/resumo`);
+    const res = await fetch(`${API_URL}/resumo`, {credentials: 'include'});
     if (!res.ok) throw new Error('Erro ao buscar resumo');
     return res.json();
   }
 
   static async analisar(): Promise<AnaliseIA> {
-    const res = await fetch(`${API_URL}/analisar`, { method: 'POST' });
+    const res = await fetch(`${API_URL}/analisar`, { method: 'POST', credentials: 'include' });
     if (!res.ok) throw new Error('Erro ao analisar finanças');
     return res.json();
   }

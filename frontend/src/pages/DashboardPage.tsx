@@ -39,7 +39,7 @@ export const DashboardPage: React.FC = () => {
             </div>
             <div>
               <h1 className="text-xl font-bold text-white">Olá, {usuario?.nome}</h1>
-              <p className="text-xs text-slate-400">Salário Base: R$ {usuario?.salarioMensal.toFixed(2)}</p>
+              <p className="text-xs text-slate-400">Salário Base: R$ {usuario?.salarioMensal}</p>
             </div>
           </div>
           <Botao variante="fantasma" onClick={logout} className="text-sm text-slate-400 hover:text-white">

@@ -7,6 +7,7 @@ export class AuthService {
     const res = await fetch(`${API_URL}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ email, senha }),
     });
 
@@ -21,6 +22,7 @@ export class AuthService {
   static async signup(nome: string, email: string, senha: string, salarioMensal: number): Promise<Usuario> {
     const res = await fetch(`${API_URL}/signup`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nome, email, senha, salarioMensal }),
     });
@@ -34,12 +36,12 @@ export class AuthService {
   }
 
   static async logout(): Promise<void> {
-    await fetch(`${API_URL}/logout`, { method: 'POST' });
+    await fetch(`${API_URL}/logout`, { method: 'POST', credentials: 'include' });
   }
 
   static async me(): Promise<Usuario | null> {
     try {
-      const res = await fetch(`${API_URL}/me`);
+      const res = await fetch(`${API_URL}/me`, {credentials: 'include'});
       if (!res.ok) return null;
       return res.json();
     } catch {
