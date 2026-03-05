@@ -1,10 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 
-export const sessionAuthMiddleware = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const sessionAuthMiddleware = (req: Request, res: Response, next: NextFunction) => {
   const userId = (req.session as any)?.userId;
 
   if (!userId) {
@@ -12,4 +8,4 @@ export const sessionAuthMiddleware = (
   }
 
   next();
-};
+}

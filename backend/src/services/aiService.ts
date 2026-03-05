@@ -6,7 +6,7 @@ export class AIService {
 
   static async analisarFinancas(transacoes: Transacao[], salario: number): Promise<AnaliseIA> {
     if (!process.env.GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY não configurada no servidor.");
+      throw new Error("Chave de api não configurada.");
     }
 
     const dadosFinanceiros = JSON.stringify({
@@ -15,10 +15,9 @@ export class AIService {
         ...t,
         valor: t.tipo === 'DESPESA' ? -t.valor : t.valor
       }))
-    });
+    })
 
-    const prompt = `
-      Atue como um Consultor Financeiro Sênior e Auditor. Analise os seguintes dados financeiros brutos.
+    const prompt = `Atue como um Consultor Financeiro Sênior e Auditor. Analise os seguintes dados financeiros brutos.
       Identifique padrões de gastos, desperdícios, e sugira otimizações agressivas para retorno financeiro.
       Calcule potenciais de investimento se o usuário seguir as dicas.
       
@@ -59,11 +58,12 @@ export class AIService {
         }
       });
 
-      if (response.text) {
-        return JSON.parse(response.text) as AnaliseIA;
+      if (!response.text) {
+        throw new Error("Resposta da IA vazia.");
       }
 
-      throw new Error("Resposta da IA vazia.");
+      return JSON.parse(response.text) as AnaliseIA;
+
     } catch (error) {
       console.error("Erro no AIService:", error);
       throw error;

@@ -17,13 +17,9 @@ export class FinanceEngine {
     const diasNoMes = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const diaAtual = now.getDate();
 
-    const totalReceita = transacoes
-      .filter(t => t.tipo === 'RECEITA')
-      .reduce((acc, t) => acc + Number(t.valor), 0);
+    const totalReceita = transacoes.filter(t => t.tipo === 'RECEITA').reduce((acc, t) => acc + Number(t.valor), 0);
 
-    const totalDespesa = transacoes
-      .filter(t => t.tipo === 'DESPESA')
-      .reduce((acc, t) => acc + Number(t.valor), 0);
+    const totalDespesa = transacoes.filter(t => t.tipo === 'DESPESA').reduce((acc, t) => acc + Number(t.valor), 0);
 
     const saldoAtual = salarioMensal + totalReceita - totalDespesa;
 
@@ -70,29 +66,18 @@ export class FinanceEngine {
     };
   }
 
-  static calculateGoalProjection(
-  salarioMensal: number,
-  totalDespesa: number,
-  valorMeta: number,
-  valorAtual: number
-) {
+  static calculateGoalProjection(salarioMensal: number, totalDespesa: number, valorMeta: number, valorAtual: number) {
 
-  const sobraMensal = salarioMensal - totalDespesa;
+    const sobraMensal = salarioMensal - totalDespesa;
 
-  if (sobraMensal <= 0) {
-    return {
-      mesesEstimados: null,
-      status: 'SEM_CAPACIDADE'
-    };
+    if (sobraMensal <= 0) {
+      return {mesesEstimados: null, status: 'SEM_CAPACIDADE'}
+    }
+
+    const restante = valorMeta - valorAtual;
+
+    const meses = Math.ceil(restante / sobraMensal);
+
+    return {mesesEstimados: meses, status: 'PROGRESSO'}
   }
-
-  const restante = valorMeta - valorAtual;
-
-  const meses = Math.ceil(restante / sobraMensal);
-
-  return {
-    mesesEstimados: meses,
-    status: 'PROGRESSO'
-  };
-}
 }
