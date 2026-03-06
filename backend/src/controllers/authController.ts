@@ -5,17 +5,14 @@ export class AuthController {
   static async signup(req: Request, res: Response) {
     try {
       const { nome, email, senha, salarioMensal } = req.body;
-      
+
       if (!nome || !email || !senha) {
         return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
       }
 
-      const user = await AuthService.registrar(nome, email, senha, salarioMensal || 0);
-      
-      // Inicia a sessão após o cadastro
-      (req.session as any).userId = user.id;
-      
-      res.status(201).json(user);
+      await AuthService.registrar(nome, email, senha, salarioMensal || 0);
+
+      res.status(201).json({message: "Usuário criado com sucesso"});
     } catch (error: any) {
       console.error('Erro no signup:', error);
       if (error.code === '23505') {
@@ -28,15 +25,12 @@ export class AuthController {
   static async login(req: Request, res: Response) {
     try {
       const { email, senha } = req.body;
-      
       const user = await AuthService.login(email, senha);
-      
       if (!user) {
         return res.status(401).json({ error: 'Credenciais inválidas' });
       }
 
       (req.session as any).userId = user.id;
-      
       res.json(user);
     } catch (error) {
       console.error('Erro no login:', error);
@@ -55,7 +49,8 @@ export class AuthController {
   }
 
   static async me(req: Request, res: Response) {
-    const userId = (req.session as any).userId;
+    try {
+          const userId = (req.session as any).userId;
     if (!userId) {
       return res.status(401).json({ error: 'Não autenticado' });
     }
@@ -66,5 +61,8 @@ export class AuthController {
     }
 
     res.json(user);
+    } catch (error) {
+      console.error("Erro no me: ", error)
+    }
   }
 }

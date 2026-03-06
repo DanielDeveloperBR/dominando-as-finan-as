@@ -8,10 +8,7 @@ interface Transaction {
 
 export class FinanceEngine {
 
-  static calculate(
-    salarioMensal: number,
-    transacoes: Transaction[]
-  ) {
+  static calculate(salarioMensal: number, transacoes: Transaction[]) {
 
     const now = new Date();
     const diasNoMes = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
@@ -25,11 +22,9 @@ export class FinanceEngine {
 
     const gastoMedioDiario = diaAtual > 0 ? totalDespesa / diaAtual : 0;
 
-    const saldoPrevisto =
-      salarioMensal + totalReceita - (gastoMedioDiario * diasNoMes);
+    const saldoPrevisto = salarioMensal + totalReceita - (gastoMedioDiario * diasNoMes);
 
-    const percentualComprometido =
-      salarioMensal > 0 ? totalDespesa / salarioMensal : 0;
+    const percentualComprometido = salarioMensal > 0 ? totalDespesa / salarioMensal : 0;
 
     let score = 100;
     score -= percentualComprometido * 50;

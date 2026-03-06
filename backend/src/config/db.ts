@@ -17,7 +17,6 @@ export const query = (text: string, params?: any[]) => pool.query(text, params);
 
 export const initDb = async () => {
   try {
-    // Tabela de Usuários
     await query(`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -29,17 +28,6 @@ export const initDb = async () => {
       );
     `);
 
-    await query(`
-  CREATE TABLE IF NOT EXISTS goals (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    nome VARCHAR(100) NOT NULL,
-    valor_meta DECIMAL(12,2) NOT NULL,
-    valor_atual DECIMAL(12,2) DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-  );
-`);
-
     // Tabela de Transações
     await query(`
       CREATE TABLE IF NOT EXISTS transactions (
@@ -49,7 +37,9 @@ export const initDb = async () => {
         valor DECIMAL(12, 2) NOT NULL,
         tipo VARCHAR(20) NOT NULL, -- 'RECEITA' ou 'DESPESA'
         categoria VARCHAR(50) NOT NULL,
-        data TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        data TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        group_id UUID REFERENCES groups(id) ON DELETE CASCADE,
+        idempotency_key VARCHAR(255) NULL
       );
     `);
 
@@ -61,7 +51,7 @@ export const initDb = async () => {
         "expire" timestamp(6) NOT NULL,
         CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
       ) WITH (OIDS=FALSE);
-      CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+        CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
     `);
 
     await query(`
@@ -102,26 +92,26 @@ export const initDb = async () => {
 
     await query(`
       CREATE TABLE IF NOT EXISTS group_members (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  group_id UUID REFERENCES groups(id) ON DELETE CASCADE,
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  role VARCHAR(20) DEFAULT 'MEMBRO',
-  UNIQUE(group_id, user_id)
-);
-`)
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        group_id UUID REFERENCES groups(id) ON DELETE CASCADE,
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        role VARCHAR(20) DEFAULT 'MEMBRO',
+        UNIQUE(group_id, user_id)
+      );
+    `)
 
     await query(`
-  CREATE TABLE IF NOT EXISTS monthly_scores (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    ano INT NOT NULL,
-    mes INT NOT NULL,
-    score INT NOT NULL,
-    saldo_previsto DECIMAL(12,2) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, ano, mes)
-  );
-`);
+      CREATE TABLE IF NOT EXISTS monthly_scores (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        ano INT NOT NULL,
+        mes INT NOT NULL,
+        score INT NOT NULL,
+        saldo_previsto DECIMAL(12,2) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, ano, mes)
+      );
+    `);
     console.log('Banco de dados inicializado com sucesso.');
   } catch (err) {
     console.error('Erro ao inicializar banco de dados:', err);

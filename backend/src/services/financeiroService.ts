@@ -1,6 +1,6 @@
+import { FinanceEngine } from '@/engine/financeEngine';
 import { query } from '../config/db';
 import { Transacao } from '../types';
-import { FinanceEngine } from './financeEngine';
 
 export class FinanceiroService {
   static async listarTransacoes(userId: string): Promise<Transacao[]> {
@@ -8,16 +8,25 @@ export class FinanceiroService {
     return res.rows
   }
 
-  static async adicionarTransacao(userId: string, dados: Omit<Transacao, 'id' | 'user_id' | 'data'>): Promise<Transacao> {
-    if (dados.valor <= 0) {
-      throw new Error('Valor deve ser maior que zero');
+  static async adicionarTransacao(userId: string, dados: Omit<Transacao, 'id' | 'user_id' | 'data'>, key: string) {
+
+    const exists = await query(`SELECT id FROM transactions WHERE idempotency_key = $1`, [key])
+
+    if (exists.rows.length > 0) {
+      return exists.rows[0];
     }
 
-    const res = await query(`INSERT INTO transactions (user_id, descricao, valor, tipo, categoria) VALUES ($1, $2, $3, $4, $5) RETURNING id, user_id, descricao, valor, tipo, categoria, data`, [userId, dados.descricao, dados.valor, dados.tipo, dados.categoria]);
+    const res = await query(`INSERT INTO transactions (user_id, descricao, valor, tipo, categoria, idempotency_key) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [userId, dados.descricao, dados.valor, dados.tipo, dados.categoria, key]
+    );
+
     return res.rows[0];
   }
 
   static async removerTransacao(userId: string, id: string): Promise<void> {
+    if (!id) {
+      throw new Error('ID é obrigatório para remover transação');
+    }
     await query(`DELETE FROM transactions WHERE id = $1 AND user_id = $2`, [id, userId]);
   }
 
@@ -50,7 +59,6 @@ export class FinanceiroService {
 
     const summary = FinanceEngine.calculate(salarioMensal, transacoes);
 
-    // 📈 salvar histórico mensal
     const now = new Date();
     const ano = now.getFullYear();
     const mes = now.getMonth() + 1;
@@ -107,7 +115,7 @@ export class FinanceiroService {
       [userId]
     );
 
-    const salario = Number(userRes.rows[0].salario_mensal);
+    const salario = Number(userRes.rows[0].salario_mensal || 0);
 
     return metasRes.rows.map(meta => ({
       ...meta,

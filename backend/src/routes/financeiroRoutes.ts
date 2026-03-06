@@ -1,13 +1,12 @@
 import { Router } from 'express';
 import { FinanceiroController } from '../controllers/financeiroController';
-import { sessionAuthMiddleware } from '../middlewares/authMiddleware';
+import { sessionAuthMiddleware } from '@/middlewares/authMiddleware';
 
 const router = Router();
-
 router.use(sessionAuthMiddleware);
 
-router.get('/', FinanceiroController.listar);
-router.post('/', FinanceiroController.adicionar);
+router.get('/listarFinanceiro', FinanceiroController.listar);
+router.post('/adicionarFinanceiro', FinanceiroController.adicionar);
 router.delete('/:id', FinanceiroController.remover);
 router.get('/resumo', FinanceiroController.resumo);
 router.post('/analisar', FinanceiroController.analisar);

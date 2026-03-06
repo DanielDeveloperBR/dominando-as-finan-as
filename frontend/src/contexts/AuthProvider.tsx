@@ -1,18 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Usuario } from '../types';
-import { AuthService } from '../services/authService';
+import { useState, useEffect } from 'react';
+import { Usuario } from '@/types';
+import { AuthService } from '@/services/authService';
+import { AuthContext } from './AuthContext';
 
-interface AuthContextType {
-  usuario: Usuario | null;
-  loading: boolean;
-  login: (email: string, senha: string) => Promise<void>;
-  signup: (nome: string, email: string, senha: string, salarioMensal: number) => Promise<void>;
-  logout: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -21,12 +12,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const user = await AuthService.me();
         setUsuario(user);
-      } catch (error) {
+      } catch {
         setUsuario(null);
       } finally {
         setLoading(false);
       }
     };
+
     checkAuth();
   }, []);
 
@@ -50,12 +42,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
-  }
-  return context;
-};
+}

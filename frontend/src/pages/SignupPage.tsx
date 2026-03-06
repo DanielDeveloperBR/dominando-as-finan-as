@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'motion/react';
 import { UserPlus, Mail, Lock, User, Wallet, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/contexts';
 
 export const SignupPage: React.FC = () => {
   const [nome, setNome] = useState('');
@@ -14,7 +14,7 @@ export const SignupPage: React.FC = () => {
   const { signup } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     setErro(null);
     setCarregando(true);

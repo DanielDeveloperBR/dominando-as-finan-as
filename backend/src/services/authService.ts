@@ -12,7 +12,7 @@ export class AuthService {
   }
 
   static async login(email: string, senha: string): Promise<Usuario | null> {
-    const res = await query(`SELECT id, nome, email, password_hash, salario_mensal as "salarioMensal", created_at FROM users WHERE email = $1`, [email]);
+    const res = await query(`SELECT id, nome, email, password_hash, salario_mensal as "salarioMensal", created_at FROM users WHERE email = $1 LIMIT 1`, [email]);
 
     if (res.rowCount === 0) return null;
 

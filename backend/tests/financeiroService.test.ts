@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { FinanceiroService } from '../services/financeiroService';
-import { Transacao, TipoTransacao, Categoria } from '../types';
+import { FinanceiroService } from '../src/services/financeiroService';
+import { Categoria, TipoTransacao, Transacao } from '@/types';
 
 describe('FinanceiroService', () => {
   const transacoesMock: Transacao[] = [

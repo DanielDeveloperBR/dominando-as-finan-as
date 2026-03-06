@@ -19,16 +19,21 @@ export class FinanceiroController {
       const userId = (req.session as any).userId;
       const { descricao, valor, tipo, categoria } = req.body;
 
+      const key = req.headers['idempotency-key'] as string;
+
+      if (!key){
+        return res.status(400).json({error: "Chave inválida!"})
+      }
+
       if (!descricao || !valor || !tipo || !categoria) {
         return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
       }
 
-      const transacao = await FinanceiroService.adicionarTransacao(userId, {
-        descricao,
-        valor,
-        tipo,
-        categoria
-      });
+      if (valor <= 0) {
+        return res.status(400).json({ message: "Valor deve ser maior que zero" });
+      }
+
+      const transacao = await FinanceiroService.adicionarTransacao(userId, {descricao, valor, tipo, categoria}, key);
 
       res.status(201).json(transacao);
     } catch (error) {

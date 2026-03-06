@@ -1,36 +1,43 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { FinanceiroService } from '../services/financeiroService';
-import { Transacao, TipoTransacao, AnaliseIA } from '../types';
+import { useAuth } from '@/contexts';
+import { FinanceSummary, HistoricoScoreItem, FinanceiroService } from '../services/financeiroService';
+import { Transacao, AnaliseIA, TipoTransacao } from '../types/index';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 
 export const usePainel = () => {
   const { usuario, logout } = useAuth();
   const [transacoes, setTransacoes] = useState<Transacao[]>([]);
   const [resumo, setResumo] = useState({ receitaTotal: 0, despesaTotal: 0, saldoTotal: 0 });
+  const [summary, setSummary] = useState<FinanceSummary | null>(null);
+  const [historicoScore, setHistoricoScore] = useState<HistoricoScoreItem[]>([]);
   const [filtroCategoria, setFiltroCategoria] = useState<string>('TODAS');
   const [analiseIA, setAnaliseIA] = useState<AnaliseIA | null>(null);
   const [carregandoIA, setCarregandoIA] = useState(false);
   const [carregando, setCarregando] = useState(true);
 
-  const carregarDados = async () => {
+  const carregarDados = useCallback(async () => {
     if (!usuario) return;
     try {
-      const [t, r] = await Promise.all([
+      const [t, r, s, h] = await Promise.all([
         FinanceiroService.listar(),
-        FinanceiroService.resumo()
+        FinanceiroService.resumo(),
+        FinanceiroService.getSummary().catch(() => null),
+        FinanceiroService.getHistoricoScore().catch(() => []),
       ]);
       setTransacoes(t);
       setResumo(r);
+      setSummary(s ? { ...s, alertas: s.alertas ?? [] } : null);
+      setHistoricoScore(h);
     } catch (error) {
       console.error(error);
     } finally {
       setCarregando(false);
     }
-  };
+
+  }, [usuario]);
 
   useEffect(() => {
     carregarDados();
-  }, [usuario]);
+  }, [carregarDados]);
 
   const adicionarTransacao = async (dados: any) => {
     await FinanceiroService.adicionar(dados);
@@ -70,6 +77,17 @@ export const usePainel = () => {
     return Object.entries(agrupado).map(([name, value]) => ({ name, value }));
   }, [transacoes]);
 
+  const dadosGraficoHistorico = useMemo(() => {
+    const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    return [...historicoScore]
+      .sort((a, b) => a.ano !== b.ano ? a.ano - b.ano : a.mes - b.mes)
+      .map(item => ({
+        label: `${MESES[item.mes - 1]}/${String(item.ano).slice(2)}`,
+        score: item.score,
+        saldo: item.saldo_previsto,
+      }));
+  }, [historicoScore]);
+
   return {
     usuario,
     logout,
@@ -85,6 +103,8 @@ export const usePainel = () => {
     carregandoIA,
     gerarAnaliseIA,
     dadosGraficoPizza,
-    carregando
+    dadosGraficoHistorico,
+    summary,
+    carregando,
   };
 };
