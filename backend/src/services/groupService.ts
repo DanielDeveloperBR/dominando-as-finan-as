@@ -53,4 +53,41 @@ export class GroupService {
 
     return result.rows;
   }
+
+  async listarGruposDoUsuario(userId: string) {
+
+    const result = await query(
+      `SELECT g.id, g.nome, gm.role
+       FROM groups g
+       JOIN group_members gm ON gm.group_id = g.id
+       WHERE gm.user_id = $1
+       ORDER BY g.nome ASC`,
+      [userId]
+    );
+
+    return result.rows;
+  }
+
+  async removerMembro(groupId: string, membroId: string, solicitanteId: string) {
+
+    // Verificar se o solicitante é OWNER do grupo
+    const permissaoRes = await query(
+      `SELECT role FROM group_members WHERE group_id = $1 AND user_id = $2`,
+      [groupId, solicitanteId]
+    );
+
+    if (permissaoRes.rows.length === 0 || permissaoRes.rows[0].role !== 'OWNER') {
+      throw new Error('Apenas o dono do grupo pode remover membros');
+    }
+
+    // OWNER não pode remover a si mesmo
+    if (membroId === solicitanteId) {
+      throw new Error('O dono do grupo não pode remover a si mesmo');
+    }
+
+    await query(
+      `DELETE FROM group_members WHERE group_id = $1 AND user_id = $2`,
+      [groupId, membroId]
+    );
+  }
 }

@@ -37,3 +37,25 @@ export interface AnaliseIA {
   projecaoInvestimento: string;
   risco: 'Baixo' | 'Médio' | 'Alto';
 }
+
+export interface Grupo {
+  id: string;
+  nome: string;
+}
+
+// Retornado por /meus-grupos — inclui o role do usuário logado naquele grupo
+export interface GrupoComRole extends Grupo {
+  role: 'OWNER' | 'MEMBER';
+}
+
+export interface MembroGrupo {
+  id: string;
+  nome: string;
+  email: string;
+  role: 'OWNER' | 'MEMBER';
+}
+
+export interface UsuarioBusca {
+  id: string;
+  nome: string;
+}

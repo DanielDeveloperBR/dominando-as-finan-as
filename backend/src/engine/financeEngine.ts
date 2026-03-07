@@ -24,7 +24,10 @@ export class FinanceEngine {
 
     const saldoPrevisto = salarioMensal + totalReceita - (gastoMedioDiario * diasNoMes);
 
-    const percentualComprometido = salarioMensal > 0 ? totalDespesa / salarioMensal : 0;
+    // Base de cálculo inclui receitas extras além do salário fixo,
+    // evitando score injusto quando o usuário tem renda variável complementar.
+    const baseDeRenda = salarioMensal + totalReceita;
+    const percentualComprometido = baseDeRenda > 0 ? totalDespesa / baseDeRenda : 0;
 
     let score = 100;
     score -= percentualComprometido * 50;
@@ -44,10 +47,10 @@ export class FinanceEngine {
       alertas.push('Seu saldo ficará negativo antes do fim do mês.');
 
     if (percentualComprometido > 0.7)
-      alertas.push('Você já comprometeu mais de 70% do salário.');
+      alertas.push('Você já comprometeu mais de 70% da sua renda total.');
 
     if (percentualComprometido > 0.9)
-      alertas.push('Comprometimento crítico.');
+      alertas.push('Comprometimento crítico: mais de 90% da renda comprometida.');
 
     return {
       totalReceita,

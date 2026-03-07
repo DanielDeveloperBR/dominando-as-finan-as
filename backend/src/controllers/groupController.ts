@@ -37,16 +37,16 @@ export class GroupController {
 
   }
 
-  static async adicionarMembro(req: Request, res: Response){
+  static async adicionarMembro(req: Request, res: Response) {
     const groupId = req.params.groupId as string
-    const {userId} = req.body
+    const { userId } = req.body
 
     if (!userId) {
       return res.status(400).json({ error: "Sem user!" });
     }
 
     try {
-      
+
       const membro = await groupService.addMember(groupId, userId);
 
       if (!membro) {
@@ -60,7 +60,7 @@ export class GroupController {
     }
   }
 
-  static async listarMembros(req: Request, res: Response){
+  static async listarMembros(req: Request, res: Response) {
     const groupId = req.params.groupId as string
 
     try {
@@ -73,17 +73,56 @@ export class GroupController {
     }
   }
 
-  static async listarTransacoes(req: Request, res: Response){
-    const groupId = req.params.groupId as string
+  static async listarTransacoes(req: Request, res: Response) {
+    const groupId = req.params.groupId as string;
 
     try {
-      const transacoes = await groupService.getGroupTransactions(groupId)
-
-      res.json(transacoes)
+      const transacoes = await groupService.getGroupTransactions(groupId);
+      res.json(transacoes);
     } catch (error) {
-      console.error("erro ao listar transações: ", error)
-      res.status(500).json({ error: "Erro ao listar transações!" })
+      console.error('erro ao listar transações: ', error);
+      res.status(500).json({ error: 'Erro ao listar transações!' });
     }
   }
 
+  static async listarMeusGrupos(req: Request, res: Response) {
+    try {
+      const userId = (req.session as any).userId;
+
+      if (!userId) {
+        return res.status(401).json({ error: 'Usuário não autenticado' });
+      }
+
+      const grupos = await groupService.listarGruposDoUsuario(userId);
+      return res.json(grupos);
+    } catch (error) {
+      console.error('Erro ao listar grupos do usuário:', error);
+      return res.status(500).json({ error: 'Erro ao listar grupos' });
+    }
+  }
+
+  static async removerMembro(req: Request, res: Response) {
+    try {
+      const solicitanteId = (req.session as any).userId;
+
+      if (!solicitanteId) {
+        return res.status(401).json({ error: 'Usuário não autenticado' });
+      }
+
+      const groupId = req.params.groupId as string
+      const membroId = req.params.membroId as string
+
+      if (!groupId || !membroId) {
+        return res.status(400).json({ error: 'groupId e membroId são obrigatórios' });
+      }
+
+      await groupService.removerMembro(groupId, membroId, solicitanteId);
+      return res.status(204).send();
+    } catch (error) {
+      const mensagem = error instanceof Error ? error.message : 'Erro ao remover membro';
+      const statusCode = mensagem.includes('Apenas o dono') || mensagem.includes('não pode remover') ? 403 : 500;
+      console.error('Erro ao remover membro:', error);
+      return res.status(statusCode).json({ error: mensagem });
+    }
+  }
 }

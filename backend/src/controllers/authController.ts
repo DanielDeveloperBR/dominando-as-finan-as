@@ -12,7 +12,7 @@ export class AuthController {
 
       await AuthService.registrar(nome, email, senha, salarioMensal || 0);
 
-      res.status(201).json({message: "Usuário criado com sucesso"});
+      res.status(201).json({ message: "Usuário criado com sucesso" });
     } catch (error: any) {
       console.error('Erro no signup:', error);
       if (error.code === '23505') {
@@ -50,19 +50,45 @@ export class AuthController {
 
   static async me(req: Request, res: Response) {
     try {
-          const userId = (req.session as any).userId;
-    if (!userId) {
-      return res.status(401).json({ error: 'Não autenticado' });
-    }
+      const userId = (req.session as any).userId;
+      if (!userId) {
+        return res.status(401).json({ error: 'Não autenticado' });
+      }
 
-    const user = await AuthService.buscarPorId(userId);
-    if (!user) {
-      return res.status(404).json({ error: 'Usuário não encontrado' });
-    }
+      const user = await AuthService.buscarPorId(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'Usuário não encontrado' });
+      }
 
-    res.json(user);
+      res.json(user);
     } catch (error) {
       console.error("Erro no me: ", error)
+    }
+  }
+
+  static async buscarPorEmail(req: Request, res: Response) {
+    try {
+      const sessionUserId = (req.session as any).userId;
+      if (!sessionUserId) {
+        return res.status(401).json({ error: 'Não autenticado' });
+      }
+
+      const { email } = req.query;
+
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ error: 'Email é obrigatório' });
+      }
+
+      const usuarioEncontrado = await AuthService.buscarPorEmail(email.trim());
+
+      if (!usuarioEncontrado) {
+        return res.status(404).json({ error: 'Usuário não encontrado' });
+      }
+
+      return res.json(usuarioEncontrado);
+    } catch (error) {
+      console.error('Erro ao buscar usuário por email:', error);
+      return res.status(500).json({ error: 'Erro ao buscar usuário' });
     }
   }
 }

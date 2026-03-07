@@ -1,20 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { usePainel } from '../../hooks/usePainel';
 import { Botao } from '../../components/Botao';
 import { CartaoResumo } from '../../components/CartaoResumo';
 import { SecaoIA } from '../../components/SecaoIA';
 import { FormularioTransacao } from '../../components/FormularioTransacao';
 import { TabelaTransacoes } from '../../components/TabelaTransacoes';
+import { DrawerGrupo } from '../CriarGrupo';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip,
   Legend, LineChart, Line, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
 import {
   TrendingUp, TrendingDown, DollarSign, LogOut,
-  ShieldCheck, ShieldAlert, ShieldX, AlertTriangle, Activity,
+  ShieldCheck, ShieldAlert, ShieldX, AlertTriangle, Activity, Users,
 } from 'lucide-react';
 import { RiskLevel } from '@/services/financeiroService';
-import { useNavigate } from 'react-router-dom';
 
 // ─── Constantes de cor ───────────────────────────────────────────────────────
 
@@ -71,7 +71,7 @@ export const DashboardPage: React.FC = () => {
     summary, carregando,
   } = usePainel();
 
-  const navigate = useNavigate()
+  const [drawerGrupoAberto, setDrawerGrupoAberto] = useState(false);
 
   if (carregando) {
     return (
@@ -86,8 +86,14 @@ export const DashboardPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-950 pb-20">
 
+      <DrawerGrupo
+        aberto={drawerGrupoAberto}
+        onFechar={() => setDrawerGrupoAberto(false)}
+        usuarioLogadoId={usuario?.id ?? ''}
+      />
+
       {/* Header */}
-      <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
+      <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <div className="bg-emerald-500/20 p-2 rounded-lg shrink-0">
@@ -106,10 +112,18 @@ export const DashboardPage: React.FC = () => {
               <span className={`text-xs font-semibold ${riskCfg.cor} hidden md:inline`}>{riskCfg.label}</span>
             </div>
           )}
-          <button onClick={()=>navigate("/criar-grupo")}>Criar grupo</button>
-          <Botao variante="fantasma" onClick={logout} className="text-sm text-slate-400 hover:text-white shrink-0">
-            <LogOut className="w-4 h-4 mr-2" /> Sair
-          </Botao>
+          <div className="flex items-center gap-2 shrink-0">
+            <Botao
+              variante="secundario"
+              onClick={() => setDrawerGrupoAberto(true)}
+              className="text-sm"
+            >
+              <Users className="w-4 h-4 mr-1.5" /> Grupos
+            </Botao>
+            <Botao variante="fantasma" onClick={logout} className="text-sm text-slate-400 hover:text-white">
+              <LogOut className="w-4 h-4 mr-2" /> Sair
+            </Botao>
+          </div>
         </div>
       </header>
 
