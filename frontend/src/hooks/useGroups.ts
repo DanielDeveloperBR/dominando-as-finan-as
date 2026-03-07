@@ -9,7 +9,6 @@ export const useGroups = () => {
         setLoading(true);
         try {
             return await GroupService.criarGrupo(nome);
-            alert("Grupo criado com sucesso!");
         } finally {
             setLoading(false);
         }

@@ -17,7 +17,7 @@ export class ScoreController {
 
       const historico = await service.historico(userId);
 
-      res.json(historico);
+      res.status(201).json(historico);
 
     } catch (error) {
 
@@ -29,4 +29,16 @@ export class ScoreController {
 
   }
 
+  async registrar(req: Request, res: Response) {
+
+    const { useId, ano, mes, score, saldoPreviso } = req.body
+
+    if (!useId || !ano || !mes || score === undefined || saldoPreviso === undefined) {
+      return res.status(400).json({ error: "Dados inválidos!" })
+    }
+
+    await service.registrarScore(useId, ano, mes, score, saldoPreviso)
+
+    res.status(201).json({ message: "Score registrado com sucesso!" })
+  }
 }
