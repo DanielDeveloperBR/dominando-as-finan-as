@@ -47,7 +47,7 @@ export const SecaoIA: React.FC<SecaoIAProps> = ({ analise, carregando, onGerar }
                 <h3 className="text-blue-400 font-semibold mb-1">📊 Auditoria Rápida</h3>
                 <p className="text-slate-300 text-sm">{analise.auditoria}</p>
               </div>
-              <div className="flex justify-between items-center bg-slate-900 p-3 rounded-lg border border-slate-800">
+              <div className="flex justify-between items-center bg-slate-900 p-3 rounded-lg border border-slate-800 gap-3">
                 <span className="text-slate-400 text-sm">Projeção 1 Ano:</span>
                 <span className="text-emerald-400 font-bold">{analise.projecaoInvestimento}</span>
               </div>
