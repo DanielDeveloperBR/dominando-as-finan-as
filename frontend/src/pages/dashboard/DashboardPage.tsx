@@ -270,16 +270,18 @@ export const DashboardPage: React.FC = () => {
                   <span className="text-white font-bold">{formatBRL(summary.gastoMedioDiario)}</span>
                 </div>
 
-                {/* Barra de comprometimento do salário */}
-                {usuario?.salarioMensal && usuario.salarioMensal > 0 && (() => {
-                  const salario = Number(usuario.salarioMensal) || 0;
-
-                  const pct = salario > 0 ? Math.min((summary.totalDespesa / salario) * 100, 100) : 0;
+                {/* Barra de comprometimento da renda — usa baseDeRenda do backend
+                     (salario + receitas extras) como denominador para consistência com o score.
+                     BUG ANTERIOR: usava apenas usuario.salarioMensal, ignorando receitas extras,
+                     causando barra 100% mesmo com renda total suficiente. */}
+                {summary.baseDeRenda > 0 && (() => {
+                  // percentualComprometido já vem calculado pelo backend — mesmo valor do score
+                  const pct = Math.min(summary.percentualComprometido * 100, 100);
                   const barCor = pct > 90 ? 'bg-rose-500' : pct > 70 ? 'bg-yellow-500' : 'bg-emerald-500';
                   return (
                     <div className="mt-2">
                       <div className="flex justify-between text-xs text-slate-400 mb-1">
-                        <span>Salário comprometido</span>
+                        <span>Renda comprometida</span>
                         <span>{pct.toFixed(1)}%</span>
                       </div>
                       <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
