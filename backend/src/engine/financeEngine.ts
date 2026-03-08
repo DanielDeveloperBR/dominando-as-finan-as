@@ -1,22 +1,43 @@
 export type RiskLevel = 'ESTAVEL' | 'ATENCAO' | 'RISCO' | 'CRITICO';
 
-interface Transaction {
+export interface EngineTransaction {
   valor: number;
   tipo: 'RECEITA' | 'DESPESA';
   data: Date;
 }
 
+export interface EngineResult {
+  totalReceita: number;
+  totalDespesa: number;
+  saldoAtual: number;
+  saldoPrevisto: number;
+  gastoMedioDiario: number;
+  /** Base real de renda: salario + totalReceita (receitas extras incluídas).
+   *  Usado como denominador da barra "Renda comprometida" no frontend.
+   *  Exposto aqui para garantir que frontend e engine usem exatamente o mesmo valor. */
+  baseDeRenda: number;
+  /** Percentual de comprometimento calculado sobre baseDeRenda (0 a 1). */
+  percentualComprometido: number;
+  score: number;
+  riskLevel: RiskLevel;
+  alertas: string[];
+}
+
 export class FinanceEngine {
 
-  static calculate(salarioMensal: number, transacoes: Transaction[]) {
+  static calculate(salarioMensal: number, transacoes: EngineTransaction[]): EngineResult {
 
     const now = new Date();
     const diasNoMes = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const diaAtual = now.getDate();
 
-    const totalReceita = transacoes.filter(t => t.tipo === 'RECEITA').reduce((acc, t) => acc + Number(t.valor), 0);
+    const totalReceita = transacoes
+      .filter(t => t.tipo === 'RECEITA')
+      .reduce((acc, t) => acc + Number(t.valor), 0);
 
-    const totalDespesa = transacoes.filter(t => t.tipo === 'DESPESA').reduce((acc, t) => acc + Number(t.valor), 0);
+    const totalDespesa = transacoes
+      .filter(t => t.tipo === 'DESPESA')
+      .reduce((acc, t) => acc + Number(t.valor), 0);
 
     const saldoAtual = salarioMensal + totalReceita - totalDespesa;
 
@@ -26,6 +47,8 @@ export class FinanceEngine {
 
     // Base de cálculo inclui receitas extras além do salário fixo,
     // evitando score injusto quando o usuário tem renda variável complementar.
+    // IMPORTANTE: este valor é retornado no payload para que o frontend
+    // use EXATAMENTE o mesmo denominador — corrige barra "Renda comprometida".
     const baseDeRenda = salarioMensal + totalReceita;
     const percentualComprometido = baseDeRenda > 0 ? totalDespesa / baseDeRenda : 0;
 
@@ -58,24 +81,34 @@ export class FinanceEngine {
       saldoAtual,
       saldoPrevisto,
       gastoMedioDiario,
+      baseDeRenda,
+      percentualComprometido,
       score,
       riskLevel,
-      alertas
+      alertas,
     };
   }
 
-  static calculateGoalProjection(salarioMensal: number, totalDespesa: number, valorMeta: number, valorAtual: number) {
-
+  static calculateGoalProjection(
+    salarioMensal: number,
+    totalDespesa: number,
+    valorMeta: number,
+    valorAtual: number
+  ) {
     const sobraMensal = salarioMensal - totalDespesa;
 
     if (sobraMensal <= 0) {
-      return {mesesEstimados: null, status: 'SEM_CAPACIDADE'}
+      return { mesesEstimados: null, status: 'SEM_CAPACIDADE' };
     }
 
     const restante = valorMeta - valorAtual;
 
+    if (restante <= 0) {
+      return { mesesEstimados: 0, status: 'PROGRESSO' };
+    }
+
     const meses = Math.ceil(restante / sobraMensal);
 
-    return {mesesEstimados: meses, status: 'PROGRESSO'}
+    return { mesesEstimados: meses, status: 'PROGRESSO' };
   }
 }
