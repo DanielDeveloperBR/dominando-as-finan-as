@@ -125,4 +125,28 @@ export class GroupController {
       return res.status(statusCode).json({ error: mensagem });
     }
   }
+
+  static async excluirGrupo(req: Request, res: Response) {
+    try {
+      const solicitanteId = (req.session as any).userId;
+
+      if (!solicitanteId) {
+        return res.status(401).json({ error: 'Usuário não autenticado' });
+      }
+
+      const groupId = req.params.groupId as string;
+
+      if (!groupId) {
+        return res.status(400).json({ error: 'groupId é obrigatório' });
+      }
+
+      await groupService.excluirGrupo(groupId, solicitanteId);
+      return res.status(204).send();
+    } catch (error) {
+      const mensagem = error instanceof Error ? error.message : 'Erro ao excluir grupo';
+      const statusCode = mensagem.includes('Apenas o dono') ? 403 : 500;
+      console.error('Erro ao excluir grupo:', error);
+      return res.status(statusCode).json({ error: mensagem });
+    }
+  }
 }

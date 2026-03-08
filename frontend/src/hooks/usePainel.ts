@@ -70,7 +70,9 @@ export const usePainel = () => {
     const agrupado = transacoes
       .filter(t => t.tipo === TipoTransacao.DESPESA)
       .reduce((acc, curr) => {
-        acc[curr.categoria] = (acc[curr.categoria] || 0) + curr.valor;
+        // Number() obrigatório: PostgreSQL retorna `numeric` como string,
+        // concatenação de strings quebraria o gráfico silenciosamente.
+        acc[curr.categoria] = (acc[curr.categoria] || 0) + Number(curr.valor);
         return acc;
       }, {} as Record<string, number>);
 

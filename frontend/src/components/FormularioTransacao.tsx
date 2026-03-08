@@ -5,7 +5,7 @@ import { Input } from './Input';
 import { TipoTransacao, Categoria, Transacao } from '../types';
 
 interface FormularioTransacaoProps {
-  onAdicionar: (transacao: Omit<Transacao, 'id'>) => void;
+  onAdicionar: (transacao: Omit<Transacao, 'id'| 'user_id'>) => void;
 }
 
 export const FormularioTransacao: React.FC<FormularioTransacaoProps> = ({ onAdicionar }) => {
@@ -14,7 +14,7 @@ export const FormularioTransacao: React.FC<FormularioTransacaoProps> = ({ onAdic
   const [tipo, setTipo] = useState<TipoTransacao>(TipoTransacao.DESPESA);
   const [categoria, setCategoria] = useState<Categoria>(Categoria.ALIMENTACAO);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: any) => {
     e.preventDefault();
     if (!valor || !descricao) return;
 

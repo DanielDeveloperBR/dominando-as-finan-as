@@ -1,17 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
 import { useGroups } from '@/hooks/useGroups';
+import { MembroGrupo, Transacao, TipoTransacao, GrupoComRole } from '@/types';
 import {
     Users, X, Plus, UserPlus, ArrowRight, ArrowLeft,
     Crown, Loader2, AlertCircle, TrendingUp, TrendingDown,
-    UserMinus, ChevronRight,
+    UserMinus, ChevronRight, Trash2,
 } from 'lucide-react';
-import { MembroGrupo, Transacao, TipoTransacao, GrupoComRole } from '@/types';
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const formatBRL = (valor: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
 
 const formatData = (dataIso: string) =>
     new Date(dataIso).toLocaleDateString('pt-BR');
+
+// ─── Sub-componentes ──────────────────────────────────────────────────────────
 
 function BadgeRole({ role }: { role: MembroGrupo['role'] }) {
     if (role === 'OWNER') {
@@ -28,7 +32,12 @@ function BadgeRole({ role }: { role: MembroGrupo['role'] }) {
     );
 }
 
-function LinhaTransacao({ transacao }: { transacao: Transacao }) {
+// Transacao enriquecida com nome do membro (retornado pela query do grupo)
+interface TransacaoGrupo extends Transacao {
+    membro_nome?: string;
+}
+
+function LinhaTransacaoGrupo({ transacao }: { transacao: TransacaoGrupo }) {
     const ehReceita = transacao.tipo === TipoTransacao.RECEITA;
     return (
         <div className="flex items-center justify-between py-3 border-b border-slate-800 last:border-0">
@@ -41,12 +50,70 @@ function LinhaTransacao({ transacao }: { transacao: Transacao }) {
                 </div>
                 <div className="min-w-0">
                     <p className="text-sm text-white font-medium truncate">{transacao.descricao}</p>
-                    <p className="text-xs text-slate-500">{formatData(transacao.data)} · {transacao.categoria}</p>
+                    <p className="text-xs text-slate-500 truncate">
+                        {formatData(transacao.data)} · {transacao.categoria}
+                        {transacao.membro_nome && (
+                            <span className="ml-1 text-slate-600">· {transacao.membro_nome}</span>
+                        )}
+                    </p>
                 </div>
             </div>
             <span className={`text-sm font-bold shrink-0 ml-4 ${ehReceita ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {ehReceita ? '+' : '-'}{formatBRL(transacao.valor)}
+                {ehReceita ? '+' : '-'}{formatBRL(Number(transacao.valor))}
             </span>
+        </div>
+    );
+}
+
+// ─── Modal de confirmação de exclusão ────────────────────────────────────────
+
+interface ModalConfirmarExclusaoProps {
+    nomeGrupo: string;
+    excluindo: boolean;
+    onConfirmar: () => void;
+    onCancelar: () => void;
+}
+
+function ModalConfirmarExclusao({ nomeGrupo, excluindo, onConfirmar, onCancelar }: ModalConfirmarExclusaoProps) {
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onCancelar} />
+            <div className="relative bg-slate-900 border border-slate-700 rounded-xl p-6 max-w-sm w-full shadow-2xl">
+                <div className="flex flex-col gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-rose-500/10 p-2.5 rounded-lg shrink-0">
+                            <Trash2 className="w-5 h-5 text-rose-400" />
+                        </div>
+                        <div>
+                            <h3 className="text-white font-semibold">Excluir grupo</h3>
+                            <p className="text-slate-400 text-sm">Esta ação não pode ser desfeita.</p>
+                        </div>
+                    </div>
+                    <p className="text-slate-300 text-sm">
+                        O grupo <span className="text-white font-semibold">"{nomeGrupo}"</span> e todos os seus membros serão removidos.
+                        As transações pessoais dos membros <span className="text-slate-400">não serão deletadas</span>.
+                    </p>
+                    <div className="flex gap-3 mt-1">
+                        <button
+                            onClick={onCancelar}
+                            disabled={excluindo}
+                            className="flex-1 py-2 text-sm font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 rounded-lg transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            onClick={onConfirmar}
+                            disabled={excluindo}
+                            className="flex-1 py-2 text-sm font-medium text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center gap-2"
+                        >
+                            {excluindo
+                                ? <><Loader2 className="w-4 h-4 animate-spin" /> Excluindo...</>
+                                : 'Excluir grupo'
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
@@ -207,12 +274,20 @@ interface EtapaGrupoAtivoProps {
     roleNoGrupo: 'OWNER' | 'MEMBER';
     usuarioLogadoId: string;
     onVoltar: () => void;
+    onGrupoExcluido: () => void;
 }
 
-function EtapaGrupoAtivo({ groupId, nomeGrupo, roleNoGrupo, usuarioLogadoId, onVoltar }: EtapaGrupoAtivoProps) {
+function EtapaGrupoAtivo({
+    groupId,
+    nomeGrupo,
+    roleNoGrupo,
+    usuarioLogadoId,
+    onVoltar,
+    onGrupoExcluido,
+}: EtapaGrupoAtivoProps) {
     const {
         membros, transacoesDoGrupo, carregandoMembros, erroGrupo,
-        carregarMembros, adicionarMembroPorEmail, removerMembro,
+        carregarMembros, adicionarMembroPorEmail, removerMembro, excluirGrupo,
     } = useGroups();
 
     const [emailNovoMembro, setEmailNovoMembro] = useState('');
@@ -221,6 +296,9 @@ function EtapaGrupoAtivo({ groupId, nomeGrupo, roleNoGrupo, usuarioLogadoId, onV
     const [erroAdicionarMembro, setErroAdicionarMembro] = useState<string | null>(null);
     const [sucessoAdicionarMembro, setSucessoAdicionarMembro] = useState(false);
     const [abaAtiva, setAbaAtiva] = useState<'membros' | 'transacoes'>('membros');
+    const [confirmarExclusao, setConfirmarExclusao] = useState(false);
+    const [excluindo, setExcluindo] = useState(false);
+    const [erroExclusao, setErroExclusao] = useState<string | null>(null);
     const isOwner = roleNoGrupo === 'OWNER';
 
     useEffect(() => {
@@ -255,129 +333,176 @@ function EtapaGrupoAtivo({ groupId, nomeGrupo, roleNoGrupo, usuarioLogadoId, onV
         }
     };
 
-    return (
-        <div className="flex flex-col gap-6">
-            <div className="flex items-center gap-3">
-                <button onClick={onVoltar} className="text-slate-400 hover:text-white transition-colors p-1 rounded">
-                    <ArrowLeft className="w-4 h-4" />
-                </button>
-                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 flex items-center gap-2 flex-1">
-                    <Users className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <p className="text-emerald-400 text-sm font-semibold truncate">{nomeGrupo}</p>
-                    {isOwner && (
-                        <span className="ml-auto flex items-center gap-1 text-xs text-yellow-400 shrink-0">
-                            <Crown className="w-3 h-3" /> Dono
-                        </span>
-                    )}
-                </div>
-            </div>
+    const handleExcluirGrupo = async () => {
+        setExcluindo(true);
+        setErroExclusao(null);
+        try {
+            await excluirGrupo(groupId);
+            onGrupoExcluido();
+        } catch (erro) {
+            setErroExclusao(erro instanceof Error ? erro.message : 'Erro ao excluir grupo');
+            setConfirmarExclusao(false);
+        } finally {
+            setExcluindo(false);
+        }
+    };
 
-            {isOwner && (
-                <form onSubmit={handleAdicionarMembro} className="flex flex-col gap-2">
-                    <label className="text-sm font-medium text-slate-300">Adicionar membro por email</label>
-                    <div className="flex gap-2">
-                        <input
-                            type="email"
-                            value={emailNovoMembro}
-                            onChange={(e) => { setEmailNovoMembro(e.target.value); setErroAdicionarMembro(null); }}
-                            placeholder="email@exemplo.com"
-                            className={`flex-1 bg-slate-800 border text-white text-sm rounded-lg px-3 py-2.5 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors ${erroAdicionarMembro ? 'border-rose-500' : 'border-slate-700'}`}
-                        />
-                        <button
-                            type="submit"
-                            disabled={adicionandoMembro || !emailNovoMembro.trim()}
-                            className="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-3 py-2.5 rounded-lg transition-colors shrink-0"
-                        >
-                            {adicionandoMembro ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                        </button>
-                    </div>
-                    {erroAdicionarMembro && (
-                        <p className="flex items-center gap-1.5 text-xs text-rose-400">
-                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />{erroAdicionarMembro}
-                        </p>
-                    )}
-                    {sucessoAdicionarMembro && <p className="text-xs text-emerald-400">✓ Membro adicionado com sucesso</p>}
-                    {erroGrupo && !erroAdicionarMembro && (
-                        <p className="flex items-center gap-1.5 text-xs text-rose-400">
-                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />{erroGrupo}
-                        </p>
-                    )}
-                </form>
+    const transacoesGrupo = transacoesDoGrupo as TransacaoGrupo[];
+
+    return (
+        <>
+            {confirmarExclusao && (
+                <ModalConfirmarExclusao
+                    nomeGrupo={nomeGrupo}
+                    excluindo={excluindo}
+                    onConfirmar={handleExcluirGrupo}
+                    onCancelar={() => setConfirmarExclusao(false)}
+                />
             )}
 
-            <div>
-                <div className="flex gap-1 bg-slate-800 p-1 rounded-lg mb-4">
-                    {(['membros', 'transacoes'] as const).map((aba) => (
+            <div className="flex flex-col gap-6">
+                {/* Header do grupo com botão voltar e excluir */}
+                <div className="flex items-center gap-3">
+                    <button onClick={onVoltar} className="text-slate-400 hover:text-white transition-colors p-1 rounded">
+                        <ArrowLeft className="w-4 h-4" />
+                    </button>
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 flex items-center gap-2 flex-1 min-w-0">
+                        <Users className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <p className="text-emerald-400 text-sm font-semibold truncate">{nomeGrupo}</p>
+                        {isOwner && (
+                            <span className="ml-auto flex items-center gap-1 text-xs text-yellow-400 shrink-0">
+                                <Crown className="w-3 h-3" /> Dono
+                            </span>
+                        )}
+                    </div>
+                    {/* Botão excluir grupo — apenas OWNER */}
+                    {isOwner && (
                         <button
-                            key={aba}
-                            onClick={() => setAbaAtiva(aba)}
-                            className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-medium py-1.5 rounded-md transition-colors ${abaAtiva === aba ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-300'}`}
+                            onClick={() => setConfirmarExclusao(true)}
+                            title="Excluir grupo"
+                            className="p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-400/10 rounded-lg transition-colors shrink-0"
                         >
-                            {aba === 'membros' ? <Users className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                            {aba === 'membros' ? 'Membros' : 'Transações'}
-                            {aba === 'membros' && membros.length > 0 && <span className="text-xs text-slate-400">({membros.length})</span>}
-                            {aba === 'transacoes' && transacoesDoGrupo.length > 0 && <span className="text-xs text-slate-400">({transacoesDoGrupo.length})</span>}
+                            <Trash2 className="w-4 h-4" />
                         </button>
-                    ))}
+                    )}
                 </div>
 
-                {carregandoMembros ? (
-                    <div className="flex justify-center py-8">
-                        <Loader2 className="w-5 h-5 text-emerald-400 animate-spin" />
-                    </div>
-                ) : (
-                    <>
-                        {abaAtiva === 'membros' && (
-                            <div className="flex flex-col gap-2">
-                                {membros.length === 0 ? (
-                                    <p className="text-center text-slate-500 text-sm py-6">Nenhum membro além de você ainda.</p>
-                                ) : (
-                                    membros.map((membro) => {
-                                        const ehOProprio = membro.id === usuarioLogadoId;
-                                        const podeRemover = isOwner && !ehOProprio;
-                                        return (
-                                            <div key={membro.id} className="flex items-center justify-between bg-slate-800 rounded-lg px-4 py-3">
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="text-white text-sm font-medium truncate">{membro.nome}</p>
-                                                    <p className="text-slate-500 text-xs truncate">{membro.email}</p>
-                                                </div>
-                                                <div className="flex items-center gap-2 shrink-0 ml-2">
-                                                    <BadgeRole role={membro.role} />
-                                                    {podeRemover && (
-                                                        <button
-                                                            onClick={() => handleRemoverMembro(membro.id)}
-                                                            disabled={removendoMembroId === membro.id}
-                                                            title="Remover membro"
-                                                            className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-400/10 rounded-md transition-colors disabled:opacity-50"
-                                                        >
-                                                            {removendoMembroId === membro.id
-                                                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                                : <UserMinus className="w-3.5 h-3.5" />
-                                                            }
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        );
-                                    })
-                                )}
-                            </div>
-                        )}
-                        {abaAtiva === 'transacoes' && (
-                            <div>
-                                {transacoesDoGrupo.length === 0 ? (
-                                    <p className="text-center text-slate-500 text-sm py-6">Nenhuma transação registrada no grupo.</p>
-                                ) : (
-                                    transacoesDoGrupo.map((transacao) => (
-                                        <LinhaTransacao key={transacao.id} transacao={transacao} />
-                                    ))
-                                )}
-                            </div>
-                        )}
-                    </>
+                {erroExclusao && (
+                    <p className="flex items-center gap-1.5 text-xs text-rose-400">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />{erroExclusao}
+                    </p>
                 )}
+
+                {/* Formulário adicionar membro — apenas OWNER */}
+                {isOwner && (
+                    <form onSubmit={handleAdicionarMembro} className="flex flex-col gap-2">
+                        <label className="text-sm font-medium text-slate-300">Adicionar membro por email</label>
+                        <div className="flex gap-2">
+                            <input
+                                type="email"
+                                value={emailNovoMembro}
+                                onChange={(e) => { setEmailNovoMembro(e.target.value); setErroAdicionarMembro(null); }}
+                                placeholder="email@exemplo.com"
+                                className={`flex-1 bg-slate-800 border text-white text-sm rounded-lg px-3 py-2.5 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors ${erroAdicionarMembro ? 'border-rose-500' : 'border-slate-700'}`}
+                            />
+                            <button
+                                type="submit"
+                                disabled={adicionandoMembro || !emailNovoMembro.trim()}
+                                className="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-3 py-2.5 rounded-lg transition-colors shrink-0"
+                            >
+                                {adicionandoMembro ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                            </button>
+                        </div>
+                        {erroAdicionarMembro && (
+                            <p className="flex items-center gap-1.5 text-xs text-rose-400">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />{erroAdicionarMembro}
+                            </p>
+                        )}
+                        {sucessoAdicionarMembro && <p className="text-xs text-emerald-400">✓ Membro adicionado com sucesso</p>}
+                        {erroGrupo && !erroAdicionarMembro && (
+                            <p className="flex items-center gap-1.5 text-xs text-rose-400">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />{erroGrupo}
+                            </p>
+                        )}
+                    </form>
+                )}
+
+                {/* Abas membros / transações */}
+                <div>
+                    <div className="flex gap-1 bg-slate-800 p-1 rounded-lg mb-4">
+                        {(['membros', 'transacoes'] as const).map((aba) => (
+                            <button
+                                key={aba}
+                                onClick={() => setAbaAtiva(aba)}
+                                className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-medium py-1.5 rounded-md transition-colors ${abaAtiva === aba ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-300'}`}
+                            >
+                                {aba === 'membros' ? <Users className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                                {aba === 'membros' ? 'Membros' : 'Transações'}
+                                {aba === 'membros' && membros.length > 0 && <span className="text-xs text-slate-400">({membros.length})</span>}
+                                {aba === 'transacoes' && transacoesGrupo.length > 0 && <span className="text-xs text-slate-400">({transacoesGrupo.length})</span>}
+                            </button>
+                        ))}
+                    </div>
+
+                    {carregandoMembros ? (
+                        <div className="flex justify-center py-8">
+                            <Loader2 className="w-5 h-5 text-emerald-400 animate-spin" />
+                        </div>
+                    ) : (
+                        <>
+                            {abaAtiva === 'membros' && (
+                                <div className="flex flex-col gap-2">
+                                    {membros.length === 0 ? (
+                                        <p className="text-center text-slate-500 text-sm py-6">Nenhum membro além de você ainda.</p>
+                                    ) : (
+                                        membros.map((membro) => {
+                                            const ehOProprio = membro.id === usuarioLogadoId;
+                                            const podeRemover = isOwner && !ehOProprio;
+                                            return (
+                                                <div key={membro.id} className="flex items-center justify-between bg-slate-800 rounded-lg px-4 py-3">
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-white text-sm font-medium truncate">{membro.nome}</p>
+                                                        <p className="text-slate-500 text-xs truncate">{membro.email}</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                                                        <BadgeRole role={membro.role} />
+                                                        {podeRemover && (
+                                                            <button
+                                                                onClick={() => handleRemoverMembro(membro.id)}
+                                                                disabled={removendoMembroId === membro.id}
+                                                                title="Remover membro"
+                                                                className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-400/10 rounded-md transition-colors disabled:opacity-50"
+                                                            >
+                                                                {removendoMembroId === membro.id
+                                                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                                    : <UserMinus className="w-3.5 h-3.5" />
+                                                                }
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            )}
+
+                            {abaAtiva === 'transacoes' && (
+                                <div>
+                                    {transacoesGrupo.length === 0 ? (
+                                        <p className="text-center text-slate-500 text-sm py-6">Nenhuma transação registrada pelos membros.</p>
+                                    ) : (
+                                        transacoesGrupo.map((transacao) => (
+                                            <LinhaTransacaoGrupo key={transacao.id} transacao={transacao} />
+                                        ))
+                                    )}
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
-        </div>
+        </>
     );
 }
 
@@ -420,6 +545,13 @@ export function DrawerGrupo({ aberto, onFechar, usuarioLogadoId }: DrawerGrupoPr
         setGrupoCriadoNome(grupo.nome);
         setRoleNoGrupoAtivo(grupo.role);
         setEtapa('ativo');
+    };
+
+    const handleGrupoExcluido = () => {
+        // Volta para lista — a lista será recarregada pelo hook após a exclusão
+        setEtapa('lista');
+        setGrupoCriadoId(null);
+        setGrupoCriadoNome('');
     };
 
     const tituloEtapa: Record<Etapa, string> = {
@@ -476,6 +608,7 @@ export function DrawerGrupo({ aberto, onFechar, usuarioLogadoId }: DrawerGrupoPr
                             roleNoGrupo={roleNoGrupoAtivo}
                             usuarioLogadoId={usuarioLogadoId}
                             onVoltar={() => setEtapa('lista')}
+                            onGrupoExcluido={handleGrupoExcluido}
                         />
                     )}
                 </div>

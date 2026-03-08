@@ -44,7 +44,7 @@ export class AuthService {
       const res = await fetch(`${API_URL}/me`, {credentials: 'include'});
       if (!res.ok) return null;
       return res.json();
-    } catch {
+    } catch{
       return null;
     }
   }

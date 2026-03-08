@@ -72,4 +72,15 @@ export class GroupService {
             throw new Error(corpo.error || 'Erro ao remover membro');
         }
     }
+
+    static async excluirGrupo(groupId: string): Promise<void> {
+        const res = await fetch(`${API_GROUPS_URL}/${groupId}`, {
+            method: 'DELETE',
+            credentials: 'include',
+        });
+        if (!res.ok) {
+            const corpo = await res.json().catch(() => ({}));
+            throw new Error(corpo.error || 'Erro ao excluir grupo');
+        }
+    }
 }

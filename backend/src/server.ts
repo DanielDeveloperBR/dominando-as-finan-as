@@ -9,6 +9,8 @@ import authRoutes from "./routes/authRoutes";
 import financeiroRoutes from "./routes/financeiroRoutes";
 import rateLimit from 'express-rate-limit';
 import groupRoutes from "./routes/groupRoutes";
+import budgeRoute from "./routes/budgeRoute";
+import goalsRoutes from "./routes/goalsRoutes";
 
 const limiter = rateLimit({
   windowMs: 60 * 1000,
@@ -52,7 +54,9 @@ async function startServer() {
   app.use("/api/auth", authRoutes);
   app.use('/finance/analisar', limiter);
   app.use("/api/financeiro", financeiroRoutes);
-  app.use('/api/groups', groupRoutes)
+  app.use('/api/groups', groupRoutes);
+  app.use('/api/budget', budgeRoute);
+  app.use('/api/goals', goalsRoutes);
 
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });

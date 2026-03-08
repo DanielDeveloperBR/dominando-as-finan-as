@@ -20,7 +20,7 @@ export const SignupPage: React.FC = () => {
     setCarregando(true);
     try {
       await signup(nome, email, senha, parseFloat(salarioMensal) || 0);
-      navigate('/');
+      navigate('/login');
     } catch (err: any) {
       setErro(err.message);
     } finally {

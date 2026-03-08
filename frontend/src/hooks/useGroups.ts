@@ -74,6 +74,13 @@ export const useGroups = () => {
         await carregarMembros(groupId);
     };
 
+    const excluirGrupo = async (groupId: string): Promise<void> => {
+        setErroGrupo(null);
+        await GroupService.excluirGrupo(groupId);
+        // Atualiza lista após exclusão
+        await carregarMeusGrupos();
+    };
+
     const selecionarGrupoExistente = (grupo: GrupoComRole) => {
         setGrupoAtivo(grupo);
     };
@@ -99,6 +106,7 @@ export const useGroups = () => {
         carregarMembros,
         adicionarMembroPorEmail,
         removerMembro,
+        excluirGrupo,
         selecionarGrupoExistente,
         limparGrupoAtivo,
     };

@@ -28,8 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signup = async (nome: string, email: string, senha: string, salarioMensal: number) => {
-    const user = await AuthService.signup(nome, email, senha, salarioMensal);
-    setUsuario(user);
+    await AuthService.signup(nome, email, senha, salarioMensal);
   };
 
   const logout = async () => {

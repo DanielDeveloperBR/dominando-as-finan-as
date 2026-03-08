@@ -5,6 +5,7 @@ const router = Router();
 
 router.get('/meus-grupos', GroupController.listarMeusGrupos);
 router.post('/criar-grupo', GroupController.criarGrupo);
+router.delete('/:groupId', GroupController.excluirGrupo);
 router.post('/:groupId/adicionar-membro', GroupController.adicionarMembro);
 router.get('/:groupId/listar-membros', GroupController.listarMembros);
 router.get('/:groupId/listar-transacoes', GroupController.listarTransacoes);

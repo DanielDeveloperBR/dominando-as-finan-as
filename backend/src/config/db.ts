@@ -11,6 +11,9 @@ const pool = new Pool({
   user: process.env.PGUSER,
   host: process.env.PGHOST,
   database: process.env.PGDATABASE,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000
 });
 
 export const query = (text: string, params?: any[]) => pool.query(text, params);
@@ -112,6 +115,46 @@ export const initDb = async () => {
         UNIQUE(user_id, ano, mes)
       );
     `);
+
+    // Limites de orçamento por categoria — um registro por categoria/mês/ano
+    await query(`
+      CREATE TABLE IF NOT EXISTS budget_limits (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        categoria VARCHAR(50) NOT NULL,
+        limite_mensal DECIMAL(12, 2) NOT NULL CHECK (limite_mensal > 0),
+        mes INT NOT NULL CHECK (mes BETWEEN 1 AND 12),
+        ano INT NOT NULL CHECK (ano >= 2020),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, categoria, mes, ano)
+      );
+    `);
+
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_budget_user_periodo
+      ON budget_limits(user_id, mes, ano);
+    `);
+
+    // Metas de poupança — tabela já declarada mas garantindo estrutura completa
+    await query(`
+      CREATE TABLE IF NOT EXISTS goals (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        titulo VARCHAR(255) NOT NULL,
+        descricao VARCHAR(500),
+        valor_meta DECIMAL(12,2) NOT NULL CHECK (valor_meta > 0),
+        valor_atual DECIMAL(12,2) DEFAULT 0 CHECK (valor_atual >= 0),
+        prazo_meses INT CHECK (prazo_meses > 0),
+        status VARCHAR(20) DEFAULT 'ATIVA' CHECK (status IN ('ATIVA', 'CONCLUIDA', 'PAUSADA')),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_goals_user
+      ON goals(user_id, status);
+    `);
+
     console.log('Banco de dados inicializado com sucesso.');
   } catch (err) {
     console.error('Erro ao inicializar banco de dados:', err);

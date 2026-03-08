@@ -48,10 +48,54 @@ export class GroupService {
   }
 
   async getGroupTransactions(groupId: string) {
-
-    const result = await query(`SELECT * FROM transactions WHERE group_id = $1 ORDER BY data DESC`, [groupId]);
+    // Busca transações de TODOS os membros do grupo (por user_id),
+    // não apenas as com group_id preenchido — transações pessoais são vinculadas
+    // ao grupo pela relação de membership, não por coluna direta.
+    const result = await query(
+      `SELECT t.id, t.user_id, t.descricao, t.valor, t.tipo, t.categoria, t.data,
+              u.nome AS membro_nome
+       FROM transactions t
+       JOIN group_members gm ON gm.user_id = t.user_id
+       JOIN users u ON u.id = t.user_id
+       WHERE gm.group_id = $1
+       ORDER BY t.data DESC`,
+      [groupId]
+    );
 
     return result.rows;
+  }
+
+  async excluirGrupo(groupId: string, solicitanteId: string): Promise<void> {
+    // Verificar se o solicitante é OWNER — apenas OWNER pode excluir o grupo
+    const permissaoRes = await query(
+      `SELECT role FROM group_members WHERE group_id = $1 AND user_id = $2`,
+      [groupId, solicitanteId]
+    );
+
+    if (permissaoRes.rows.length === 0 || permissaoRes.rows[0].role !== 'OWNER') {
+      throw new Error('Apenas o dono do grupo pode excluir o grupo');
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Remove todos os membros primeiro (FK)
+      await client.query(`DELETE FROM group_members WHERE group_id = $1`, [groupId]);
+
+      // Desvincula transações do grupo sem deletar as transações pessoais
+      await client.query(`UPDATE transactions SET group_id = NULL WHERE group_id = $1`, [groupId]);
+
+      // Remove o grupo
+      await client.query(`DELETE FROM groups WHERE id = $1`, [groupId]);
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   }
 
   async listarGruposDoUsuario(userId: string) {

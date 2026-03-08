@@ -15,6 +15,8 @@ import {
   ShieldCheck, ShieldAlert, ShieldX, AlertTriangle, Activity, Users,
 } from 'lucide-react';
 import { RiskLevel } from '@/services/financeiroService';
+import { SecaoMetas } from '../secaoMetas';
+import { SecaoOrcamento } from '../secaoOrcamento';
 
 // ─── Constantes de cor ───────────────────────────────────────────────────────
 
@@ -232,6 +234,12 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
+        {/* ── Orçamento por categoria + Metas de poupança ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <SecaoOrcamento />
+          <SecaoMetas />
+        </div>
+
         {/* ── Formulário + área secundária ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <FormularioTransacao onAdicionar={adicionarTransacao} />
@@ -264,7 +272,9 @@ export const DashboardPage: React.FC = () => {
 
                 {/* Barra de comprometimento do salário */}
                 {usuario?.salarioMensal && usuario.salarioMensal > 0 && (() => {
-                  const pct = Math.min((summary.totalDespesa / usuario.salarioMensal) * 100, 100);
+                  const salario = Number(usuario.salarioMensal) || 0;
+
+                  const pct = salario > 0 ? Math.min((summary.totalDespesa / salario) * 100, 100) : 0;
                   const barCor = pct > 90 ? 'bg-rose-500' : pct > 70 ? 'bg-yellow-500' : 'bg-emerald-500';
                   return (
                     <div className="mt-2">
