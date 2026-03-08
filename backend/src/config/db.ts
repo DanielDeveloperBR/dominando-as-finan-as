@@ -31,6 +31,14 @@ export const initDb = async () => {
       );
     `);
 
+    await query(`
+      CREATE TABLE IF NOT EXISTS analise_cache (
+        hash TEXT PRIMARY KEY,
+        resultado TEXT,
+        criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `)
+
     // Tabela de Transações
     await query(`
       CREATE TABLE IF NOT EXISTS transactions (
@@ -71,19 +79,6 @@ export const initDb = async () => {
         UNIQUE(user_id, mes, ano)
       );
     `)
-
-    await query(`
-        CREATE TABLE IF NOT EXISTS goals (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-          titulo VARCHAR(255) NOT NULL,
-          valor_meta DECIMAL(12,2) NOT NULL,
-          valor_atual DECIMAL(12,2) DEFAULT 0,
-          prazo_meses INT,
-          status VARCHAR(20) DEFAULT 'ATIVA',
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-        );
-      `)
 
     await query(`
       CREATE TABLE IF NOT EXISTS groups (
